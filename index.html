@@ -98,7 +98,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
-        const apiKey = "";
+        const apiKey = "AIzaSyDQAeb2ce_DQvHqpzeW1AvUTyal5ASSsQE";
         let currentCycleKey = null;
 
         const curriculumData = {
@@ -493,9 +493,9 @@
 
                         if (!response.ok) {
                             if (response.status === 429) {
-                                throw new Error('API rate limit exceeded. Retrying...');
+                                throw new Error('rate limit exceeded. Retrying...');
                             } else {
-                                throw new Error(`API error: ${response.statusText}`);
+                                throw new Error(`error: ${response.statusText}`);
                             }
                         }
 
@@ -530,3 +530,4 @@
     </script>
 </body>
 </html>
+
