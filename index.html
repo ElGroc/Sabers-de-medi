@@ -8,8 +8,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- This HTML file is specifically designed to be embedded in a Google Site using the "Embed" feature. -->
-    <!-- All CSS and JavaScript libraries are included directly in the HTML file to avoid external script loading issues within the Google Sites iframe. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -45,17 +43,6 @@
                 height: 400px;
             }
         }
-        .loading-animation {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #6B5B50;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body class="antialiased">
@@ -85,7 +72,7 @@
             <aside class="lg:col-span-2 order-1 lg:order-2">
                 <div class="content-card rounded-xl p-4 md:p-6 sticky top-24">
                     <h3 class="text-lg font-bold text-center text-[#6B5B50] mb-4">Progressió de Sabers per Cicle</h3>
-                     <p class="text-sm text-gray-500 text-center mb-4">Aquest gràfic mostra l'èmfasi relatiu de cada cicle en les diferents àrees de coneixement. Selecciona un cicle per ressaltar-ne el perfil.</p>
+                    <p class="text-sm text-gray-500 text-center mb-4">Aquest gràfic mostra l'èmfasi relatiu de cada cicle en les diferents àrees de coneixement. Selecciona un cicle per ressaltar-ne el perfil.</p>
                     <div class="chart-container">
                         <canvas id="curriculumChart"></canvas>
                     </div>
@@ -97,10 +84,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
-        const apiKey = "AIzaSyDQAeb2ce_DQvHqpzeW1AvUTyal5ASSsQE";
-        let currentCycleKey = null;
-
         const curriculumData = {
             inicial: {
                 title: 'Cicle Inicial (1r i 2n)',
@@ -372,7 +355,6 @@
         }
         
         function selectCycle(cycleKey) {
-            currentCycleKey = cycleKey;
             updateContent(cycleKey);
             updateChart(cycleKey);
             updateActiveButton(cycleKey);
@@ -402,27 +384,7 @@
                 `;
             });
             contentHTML += `</div>`;
-
-            contentHTML += `
-                <div class="mt-12 p-6 bg-white rounded-xl shadow-sm text-center">
-                    <h3 class="text-xl font-bold text-[#6B5B50] mb-4">Eines ✨Gemini AI✨</h3>
-                    <p class="text-gray-600 mb-6">Genera idees d'activitats o un test ràpid basat en els sabers d'aquest cicle.</p>
-                    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                        <button id="btn-activities" class="px-6 py-3 rounded-full text-sm sm:text-base font-semibold text-white bg-[#A88B79] hover:bg-[#8B776A] transition-colors" onclick="generateContent('activities')">Genera activitats</button>
-                        <button id="btn-quiz" class="px-6 py-3 rounded-full text-sm sm:text-base font-semibold text-white bg-[#6B5B50] hover:bg-[#5A4D45] transition-colors" onclick="generateContent('quiz')">Genera un test</button>
-                    </div>
-                </div>
-                <div id="ai-output" class="mt-6 p-6 content-card rounded-xl hidden"></div>
-            `;
-
             contentDisplay.innerHTML = contentHTML;
-            // The chart needs to be re-initialized if the content display is replaced
-            if (document.getElementById('curriculumChart')) {
-                 initializeChart();
-                 if (currentCycleKey) {
-                    updateChart(currentCycleKey);
-                 }
-            }
         }
 
         function updateActiveButton(activeCycleKey) {
@@ -456,78 +418,12 @@
             curriculumChart.update();
         }
 
-        async function generateContent(type) {
-            if (!currentCycleKey) return;
-
-            const outputDiv = document.getElementById('ai-output');
-            outputDiv.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loading-animation"></div><span class="ml-4 text-gray-500">Generant...</span></div>`;
-            outputDiv.classList.remove('hidden');
-
-            const cycle = curriculumData[currentCycleKey];
-            const curriculumText = cycle.content.map(block => `${block.title}: ${block.points.join(', ')}`).join('. ');
-            let systemPrompt = '';
-            let userPrompt = '';
-
-            if (type === 'activities') {
-                systemPrompt = `Ets un expert en pedagogia i currículum educatiu de Catalunya. La teva tasca és generar 3 idees d'activitats educatives creatives per a un grup d'alumnes. L'objectiu és que les activitats siguin pràctiques i atractives, basades en el contingut proporcionat.`;
-                userPrompt = `Genera 3 idees d'activitats per a alumnes del cicle educatiu "${cycle.title}". El contingut curricular és: "${curriculumText}". Cada idea ha de tenir un títol i una breu descripció. El format ha de ser una llista numerada.`;
-            } else if (type === 'quiz') {
-                systemPrompt = `Ets un expert en pedagogia i avaluació educativa de Catalunya. La teva tasca és generar 3 preguntes de test per a un grup d'alumnes. Les preguntes han de ser clares, concises i estar basades en el contingut proporcionat.`;
-                userPrompt = `Genera 3 preguntes de test (preguntes amb resposta tancada de tipus A, B, C) per a alumnes del cicle educatiu "${cycle.title}". El contingut curricular és: "${curriculumText}". Cada pregunta ha de tenir una pregunta i 3 opcions de resposta, una de les quals és la correcta. El format ha de ser una llista numerada.`;
-            }
-            
-            try {
-                let attempts = 0;
-                const maxAttempts = 3;
-                while (attempts < maxAttempts) {
-                    try {
-                        const payload = {
-                            contents: [{ parts: [{ text: userPrompt }] }],
-                            systemInstruction: { parts: [{ text: systemPrompt }] }
-                        };
-                        const response = await fetch(API_URL + apiKey, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            if (response.status === 429) {
-                                throw new Error('rate limit exceeded. Retrying...');
-                            } else {
-                                throw new Error(`error: ${response.statusText}`);
-                            }
-                        }
-
-                        const result = await response.json();
-                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (text) {
-                            outputDiv.innerHTML = `<div class="p-4 text-left">${text.replace(/\n/g, '<br>')}</div>`;
-                            return;
-                        } else {
-                            throw new Error('No content returned from API.');
-                        }
-                    } catch (error) {
-                        attempts++;
-                        if (attempts >= maxAttempts) {
-                            throw error;
-                        }
-                        const backoffTime = Math.pow(2, attempts) * 1000;
-                        await new Promise(resolve => setTimeout(resolve, backoffTime));
-                    }
-                }
-            } catch (error) {
-                console.error("Error generating content:", error);
-                outputDiv.innerHTML = `<div class="p-4 text-center text-red-500">Hi ha hagut un error en generar el contingut. Torna-ho a provar més tard.</div>`;
-            }
-        }
-
-        window.onload = () => {
+        // Initialize the chart and select the first cycle on page load
+        document.addEventListener('DOMContentLoaded', () => {
             initializeChart();
             selectCycle('inicial');
-        };
-
+        });
     </script>
+
 </body>
 </html>
-
