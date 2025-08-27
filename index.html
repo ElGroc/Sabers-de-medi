@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador del Currículum de Medi Social i Cultural</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- This HTML file is specifically designed to be embedded in a Google Site using the "Embed" feature. -->
+    <!-- All CSS and JavaScript libraries are included directly in the HTML file to avoid external script loading issues within the Google Sites iframe. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .nav-btn {
+            transition: all 0.3s ease;
+        }
+        .nav-btn.active {
+            background-color: #A88B79;
+            color: #FFFFFF;
+            font-weight: 700;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .content-card {
+            background-color: #FFFFFF;
+            border: 1px solid #EAEAEA;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .loading-animation {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #6B5B50;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-[#6B5B50]">Currículum de Medi Social, Cultural i Natural</h1>
+            <p class="mt-2 text-lg text-gray-600">Explorador interactiu dels sabers de l'educació primària a Catalunya.</p>
+        </header>
+
+        <nav class="flex justify-center space-x-2 md:space-x-4 mb-10 p-2 bg-white/50 backdrop-blur-sm rounded-full shadow-sm sticky top-4 z-10">
+            <button id="btn-inicial" class="nav-btn px-4 py-2 md:px-6 md:py-3 rounded-full text-sm md:text-base font-medium text-gray-700 bg-white" onclick="selectCycle('inicial')">Cicle Inicial</button>
+            <button id="btn-mitja" class="nav-btn px-4 py-2 md:px-6 md:py-3 rounded-full text-sm md:text-base font-medium text-gray-700 bg-white" onclick="selectCycle('mitja')">Cicle Mitjà</button>
+            <button id="btn-superior" class="nav-btn px-4 py-2 md:px-6 md:py-3 rounded-full text-sm md:text-base font-medium text-gray-700 bg-white" onclick="selectCycle('superior')">Cicle Superior</button>
+        </nav>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            
+            <section id="content-display" class="lg:col-span-3 order-2 lg:order-1">
+                <div class="text-center p-8">
+                    <h2 class="text-xl font-bold text-[#A88B79]">Benvingut/da!</h2>
+                    <p class="mt-2 text-gray-600">Selecciona un cicle educatiu a la part superior per explorar els sabers corresponents i veure com es comparen en el gràfic.</p>
+                </div>
+            </section>
+
+            <aside class="lg:col-span-2 order-1 lg:order-2">
+                <div class="content-card rounded-xl p-4 md:p-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-center text-[#6B5B50] mb-4">Progressió de Sabers per Cicle</h3>
+                     <p class="text-sm text-gray-500 text-center mb-4">Aquest gràfic mostra l'èmfasi relatiu de cada cicle en les diferents àrees de coneixement. Selecciona un cicle per ressaltar-ne el perfil.</p>
+                    <div class="chart-container">
+                        <canvas id="curriculumChart"></canvas>
+                    </div>
+                </div>
+            </aside>
+
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
+        const apiKey = "";
+        let currentCycleKey = null;
+
+        const curriculumData = {
+            inicial: {
+                title: 'Cicle Inicial (1r i 2n)',
+                content: [
+                    {
+                        icon: '👨‍👩‍👧‍👦',
+                        title: 'L\'entorn social i familiar',
+                        points: [
+                            '**La identitat i l\'autoconeixement:** Identificació dels trets personals, emocions i gustos. Reconeixement dels canvis físics i emocionals propis.',
+                            '**Relacions familiars i socials:** Reconeixement de la pròpia família i la diversitat de models familiars. Descripció dels rols i funcions de cada membre i de les relacions amb altres persones de l\'entorn.',
+                            '**L\'escola com a comunitat:** Coneixement de les diferents dependències i serveis de l\'escola. Participació activa en la vida escolar: normes, responsabilitats i col·laboració en grup.'
+                        ]
+                    },
+                    {
+                        icon: '🗺️',
+                        title: 'L\'entorn geogràfic i temporal',
+                        points: [
+                            '**Orientació espacial:** Ús de conceptes d\'orientació bàsica (dalt, baix, dreta, esquerra, a prop, lluny) en espais familiars com l\'aula, l\'escola o la pròpia habitació.',
+                            '**Representació de l\'espai:** Lectura de plànols i mapes molt senzills, i creació de representacions esquemàtiques del propi entorn (p. ex., plànol del barri o del camí de casa a l\'escola).',
+                            '**Organització del temps:** Ús d\'unitats de temps com dies de la setmana, mesos, estacions de l\'any i diferenciació entre passat, present i futur. Ordenació cronològica d\'esdeveniments personals i familiars rellevants.'
+                        ]
+                    },
+                    {
+                        icon: '🎉',
+                        title: 'Festes i tradicions',
+                        points: [
+                            '**Festes populars:** Reconeixement i participació en festes populars catalanes (Castanyada, Nadal, Carnestoltes, Sant Jordi, etc.). Identificació dels seus elements característics (menjars, vestits, cançons).',
+                            '**Tradicions i costums:** Coneixement de costums i tradicions de la cultura pròpia i d\'altres cultures presents a l\'entorn, fomentant el respecte per la diversitat cultural.'
+                        ]
+                    },
+                    {
+                        icon: '🌳',
+                        title: 'Éssers vius i el medi',
+                        points: [
+                            '**Classificació d\'éssers vius:** Distinció entre animals, plantes i fongs. Coneixement de la diversitat animal (mamífers, aus, rèptils, amfibis, peixos, insectes) i vegetal (arbres, arbustos, herbes).',
+                            '**L\'hàbitat i la supervivència:** Relació dels animals i les plantes amb el seu hàbitat. Necessitats bàsiques dels éssers vius (aigua, aire, aliment) i adaptacions al medi.',
+                            '**Cicles de la vida:** Observació i descripció dels cicles de vida d\'alguns animals i plantes (p. ex., la metamorfosi de la papallona, el creixement d\'una llavor).',
+                            '**Respecte pel medi ambient:** Pràctiques quotidianes per a la cura del medi natural: estalvi d\'aigua, reciclatge, no malmetre plantes ni animals.'
+                        ]
+                    },
+                    {
+                        icon: '🧪',
+                        title: 'Matèria, objectes i energia',
+                        points: [
+                            '**Propietats de la matèria:** Exploració sensorial de les propietats bàsiques de materials comuns (fusta, plàstic, paper, metall) a través del tacte, la vista i el so. Diferenciació entre materials naturals i artificials.',
+                            '**Fonts d\'energia:** Identificació de fonts de llum (natural i artificial) i de so. Reconèixer que l\'electricitat és una forma d\'energia que fa funcionar els aparells.',
+                            '**Ús d\'eines i màquines:** Reconeixement d\'eines i aparells senzills de l\'entorn i ús segur d\'aquests. Comprensió que serveixen per facilitar la feina.'
+                        ]
+                    }
+                ]
+            },
+            mitja: {
+                title: 'Cicle Mitjà (3r i 4t)',
+                content: [
+                    {
+                        icon: '🏛️',
+                        title: 'L\'entorn social i polític',
+                        points: [
+                            '**La població i el municipi:** Coneixement de l\'organització i el funcionament de l\'ajuntament i dels serveis públics que ofereix a la ciutadania (biblioteques, escoles, centres de salut, etc.).',
+                            '**Organització territorial:** Estudi de l\'organització de Catalunya en comarques i les seves característiques (capital, paisatge, activitats econòmiques). Identificació de la pròpia comarca.',
+                            '**Societat i diversitat:** Valoració de la importància dels diferents rols i funcions dels grups socials. Reconeixement de la diversitat cultural i social com una riquesa.',
+                            '**Valors democràtics:** Nocions bàsiques de participació cívica i normes de convivència.'
+                        ]
+                    },
+                    {
+                        icon: '📜',
+                        title: 'L\'entorn històric',
+                        points: [
+                            '**Concepte de temps històric:** Diferenciació entre el passat, el present i el futur, i la seva representació en línies de temps. Ús d\'unitats de temps històriques (dècades, segles).',
+                            '**Fets i personatges històrics:** Nocions bàsiques sobre la història de Catalunya i d\'Espanya, amb èmfasi en fets i personatges rellevants (p. ex., la romanització, la societat medieval, l\'era industrial).',
+                            '**Fonts històriques:** Identificació i anàlisi de fonts històriques senzilles (fotografies antigues, mapes, monedes, relats orals) per comprendre el passat.',
+                            '**Canvis i continuïtats:** Comparació de la vida quotidiana del passat amb la del present per identificar els canvis i els elements que es mantenen.'
+                        ]
+                    },
+                    {
+                        icon: '🏭',
+                        title: 'L\'entorn econòmic',
+                        points: [
+                            '**Sectors econòmics:** Diferenciació entre el sector primari (agricultura, ramaderia, pesca), el secundari (indústria) i el terciari (serveis). Identificació de les activitats principals del municipi o la comarca.',
+                            '**El cicle de producció:** Comprensió de com els productes passen de la matèria primera al producte elaborat i el seu camí fins al consumidor.',
+                            '**Consum responsable:** Valoració de la importància del consum responsable i el respecte pel medi ambient en el procés de producció i consum.'
+                        ]
+                    },
+                    {
+                        icon: '🏞️',
+                        title: 'L\'entorn geogràfic',
+                        points: [
+                            '**Paisatges de Catalunya:** Estudi de les característiques principals dels paisatges catalans (costaner, de muntanya, de plana) i dels elements naturals (rius, llacs, muntanyes, etc.) i humanitzats (pobles, camps de conreu, carreteres).',
+                            '**Representació de l\'espai:** Interpretació de mapes temàtics (de clima, de relleu, de població) i ús de llegendes, escales i punts cardinals. Representació de territoris més amplis (la comarca, Catalunya).',
+                            '**Canvis en el paisatge:** Identificació de com les activitats humanes transformen el paisatge (p. ex., construcció de carreteres, urbanitzacions, etc.).'
+                        ]
+                    },
+                    {
+                        icon: '🦋',
+                        title: 'Ecosistemes i biodiversitat',
+                        points: [
+                            '**Relació entre éssers vius i el medi:** Reconeixement de les interaccions que es donen en un ecosistema (cadenes alimentàries).',
+                            '**Flora i fauna de Catalunya:** Identificació de les espècies animals i vegetals més representatives de Catalunya. Valoració de la biodiversitat.',
+                            '**L\'impacte humà:** Nocions sobre els problemes ambientals causats per l\'acció humana (contaminació, desforestació) i la importància de la conservació.',
+                            '**La salut i el benestar:** Importància dels hàbits saludables (higiene, alimentació equilibrada, exercici físic).'
+                        ]
+                    },
+                    {
+                        icon: '⚙️',
+                        title: 'Energia i tecnologia',
+                        points: [
+                            '**Formes d\'energia:** Comprensió que l\'energia existeix en diferents formes (llum, calor, elèctrica, de moviment).',
+                            '**Tecnologia i màquines:** Identificació de màquines i eines, i la seva utilitat per a l\'ésser humà. Diferenciació entre màquines simples (palanca, rampa, politja) i complexes.',
+                            '**Fonts d\'energia renovables:** Nocions bàsiques sobre les fonts d\'energia renovables (solar, eòlica) i el seu paper en la sostenibilitat.'
+                        ]
+                    }
+                ]
+            },
+            superior: {
+                title: 'Cicle Superior (5è i 6è)',
+                content: [
+                    {
+                        icon: '🇪🇺',
+                        title: 'L\'entorn polític i institucional',
+                        points: [
+                            '**Organització de l\'Estat i la Unió Europea:** Coneixement del funcionament bàsic de les institucions de govern de Catalunya, Espanya i la Unió Europea (govern, parlament).',
+                            '**Valors i drets democràtics:** Comprensió dels valors democràtics (llibertat, justícia, igualtat) i dels Drets Humans. Reflexió sobre els drets i deures com a ciutadans.',
+                            '**Participació ciutadana:** Reconeixement de les vies de participació cívica (eleccions, associacionisme).'
+                        ]
+                    },
+                    {
+                        icon: '🏺',
+                        title: 'L\'entorn històric',
+                        points: [
+                            '**Etapes de la història:** Estudi de les grans etapes de la història de Catalunya i d\'Espanya: Prehistòria, Edat Antiga, Edat Mitjana, Edat Moderna i Edat Contemporània. Identificació de fets i personatges rellevants de cada època.',
+                            '**Causa i conseqüència:** Anàlisi de les causes i conseqüències dels fets històrics. Ús del pensament crític per comprendre les transformacions socials al llarg del temps.',
+                            '**Recerca històrica:** Ús de diferents tipus de fonts (documents escrits, objectes, edificis, fonts orals) per a la recerca i l\'anàlisi d\'un fet històric.'
+                        ]
+                    },
+                    {
+                        icon: '🌍',
+                        title: 'L\'entorn geogràfic',
+                        points: [
+                            '**Geografia física:** Descripció del relleu, clima, hidrografia i vegetació de Catalunya, Espanya i Europa. Identificació de grans unitats de relleu, rius i zones climàtiques.',
+                            '**Geografia humana:** Anàlisi de la població: distribució, creixement i moviments migratoris. Coneixement dels factors que influeixen en la distribució de la població.',
+                            '**L\'impacte ambiental:** Comprensió de l\'impacte de les activitats humanes en el medi ambient i la necessitat d\'un desenvolupament sostenible.',
+                            '**El món globalitzat:** Reconeixement de la interconnexió entre els països i la interdependència econòmica i cultural. Valoració de la diversitat cultural com a font de riquesa.'
+                        ]
+                    },
+                    {
+                        icon: '🌐',
+                        title: 'El món globalitzat',
+                        points: [
+                            '**La interconnexió global:** Comprensió de com els productes, les idees i les persones es mouen per tot el món.',
+                            '**Reptes globals:** Reflexió sobre reptes com el canvi climàtic, la desigualtat i la pobresa en un context globalitzat. Coneixement dels Objectius de Desenvolupament Sostenible (ODS).',
+                            '**Diàleg intercultural:** Valoració del diàleg i el respecte per les diferents cultures i formes de vida.'
+                        ]
+                    },
+                    {
+                        icon: '🧬',
+                        title: 'L\'organisme humà',
+                        points: [
+                            '**Anatomia i fisiologia:** Estudi dels principals sistemes i aparells del cos humà: digestiu, circulatori, respiratori, excretor, locomotor i nerviós. Comprensió de les seves funcions i de com es relacionen entre ells.',
+                            '**Hàbits de vida saludable:** Aprofundiment en la importància d\'una alimentació equilibrada, la pràctica d\'exercici físic regular, el descans i la higiene per a una bona salut.',
+                            '**Sexualitat i reproducció:** Nocions bàsiques sobre la reproducció humana i els canvis físics i emocionals durant la pubertat.'
+                        ]
+                    },
+                    {
+                        icon: '🚀',
+                        title: 'La Terra i l\'univers',
+                        points: [
+                            '**Moviments de la Terra:** Comprensió dels moviments de rotació (dia i nit) i translació (estacions de l\'any) i les seves conseqüències.',
+                            '**El sistema solar:** Estudi dels components del sistema solar: planetes, satèl·lits, asteroides i cometes. Comprensió de la seva posició i òrbites.',
+                            '**Fenòmens naturals i cicles:** Anàlisi de fenòmens naturals com ara el cicle de l\'aigua i els seus estats. Comprensió dels efectes de l\'escalfament global i els factors que hi contribueixen.'
+                        ]
+                    }
+                ]
+            }
+        };
+
+        const contentDisplay = document.getElementById('content-display');
+        const buttons = {
+            inicial: document.getElementById('btn-inicial'),
+            mitja: document.getElementById('btn-mitja'),
+            superior: document.getElementById('btn-superior')
+        };
+
+        let curriculumChart;
+
+        function initializeChart() {
+            // Check if a chart instance already exists and destroy it to avoid the error
+            if (curriculumChart) {
+                curriculumChart.destroy();
+            }
+
+            const chartCtx = document.getElementById('curriculumChart').getContext('2d');
+            curriculumChart = new Chart(chartCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Societat i Política', 'Història i Evolució', 'Geografia i Medi Físic', 'Vida i Ecosistemes', 'Matèria i Tecnologia'],
+                    datasets: [
+                        {
+                            label: 'Cicle Inicial',
+                            data: [3, 2, 3, 5, 3], // Updated data for the new curriculum
+                            fill: true,
+                            backgroundColor: 'rgba(239, 199, 173, 0.2)',
+                            borderColor: 'rgb(239, 199, 173)',
+                            pointBackgroundColor: 'rgb(239, 199, 173)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(239, 199, 173)'
+                        },
+                        {
+                            label: 'Cicle Mitjà',
+                            data: [4, 4, 4, 4, 4], // Updated data for the new curriculum
+                            fill: true,
+                            backgroundColor: 'rgba(168, 139, 121, 0.2)',
+                            borderColor: 'rgb(168, 139, 121)',
+                            pointBackgroundColor: 'rgb(168, 139, 121)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(168, 139, 121)'
+                        },
+                        {
+                            label: 'Cicle Superior',
+                            data: [5, 5, 5, 5, 5], // Updated data for the new curriculum
+                            fill: true,
+                            backgroundColor: 'rgba(107, 91, 80, 0.2)',
+                            borderColor: 'rgb(107, 91, 80)',
+                            pointBackgroundColor: 'rgb(107, 91, 80)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(107, 91, 80)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 2
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: '#EAEAEA'
+                            },
+                            grid: {
+                                color: '#EAEAEA'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11
+                                },
+                                color: '#4A4A4A'
+                            },
+                            ticks: {
+                                display: false,
+                                stepSize: 1,
+                                max: 5,
+                                min: 0
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            });
+        }
+        
+        function selectCycle(cycleKey) {
+            currentCycleKey = cycleKey;
+            updateContent(cycleKey);
+            updateChart(cycleKey);
+            updateActiveButton(cycleKey);
+        }
+
+        function updateContent(cycleKey) {
+            const cycle = curriculumData[cycleKey];
+            let contentHTML = `
+                <h2 class="text-2xl font-bold text-center mb-6 text-[#A88B79]">${cycle.title}</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            `;
+            cycle.content.forEach(block => {
+                contentHTML += `
+                    <div class="content-card rounded-xl p-6 flex flex-col">
+                        <div class="flex items-center mb-4">
+                            <span class="text-3xl mr-4">${block.icon}</span>
+                            <h3 class="text-lg font-bold text-[#6B5B50]">${block.title}</h3>
+                        </div>
+                        <ul class="list-disc list-inside space-y-2 text-gray-600 flex-grow">
+                `;
+                block.points.forEach(point => {
+                    contentHTML += `<li>${point}</li>`;
+                });
+                contentHTML += `
+                        </ul>
+                    </div>
+                `;
+            });
+            contentHTML += `</div>`;
+
+            contentHTML += `
+                <div class="mt-12 p-6 bg-white rounded-xl shadow-sm text-center">
+                    <h3 class="text-xl font-bold text-[#6B5B50] mb-4">Eines ✨Gemini AI✨</h3>
+                    <p class="text-gray-600 mb-6">Genera idees d'activitats o un test ràpid basat en els sabers d'aquest cicle.</p>
+                    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                        <button id="btn-activities" class="px-6 py-3 rounded-full text-sm sm:text-base font-semibold text-white bg-[#A88B79] hover:bg-[#8B776A] transition-colors" onclick="generateContent('activities')">Genera activitats</button>
+                        <button id="btn-quiz" class="px-6 py-3 rounded-full text-sm sm:text-base font-semibold text-white bg-[#6B5B50] hover:bg-[#5A4D45] transition-colors" onclick="generateContent('quiz')">Genera un test</button>
+                    </div>
+                </div>
+                <div id="ai-output" class="mt-6 p-6 content-card rounded-xl hidden"></div>
+            `;
+
+            contentDisplay.innerHTML = contentHTML;
+            // The chart needs to be re-initialized if the content display is replaced
+            if (document.getElementById('curriculumChart')) {
+                 initializeChart();
+                 if (currentCycleKey) {
+                    updateChart(currentCycleKey);
+                 }
+            }
+        }
+
+        function updateActiveButton(activeCycleKey) {
+            Object.keys(buttons).forEach(key => {
+                if (key === activeCycleKey) {
+                    buttons[key].classList.add('active');
+                } else {
+                    buttons[key].classList.remove('active');
+                }
+            });
+        }
+        
+        const cycleMap = {
+            inicial: 0,
+            mitja: 1,
+            superior: 2
+        };
+
+        function updateChart(cycleKey) {
+            if (!curriculumChart) return;
+            const activeIndex = cycleMap[cycleKey];
+            curriculumChart.data.datasets.forEach((dataset, index) => {
+                if (index === activeIndex) {
+                    dataset.borderWidth = 4;
+                    dataset.backgroundColor = dataset.backgroundColor.replace(/0.2\)$/, '0.6)');
+                } else {
+                    dataset.borderWidth = 2;
+                    dataset.backgroundColor = dataset.backgroundColor.replace(/0.6\)$/, '0.2)');
+                }
+            });
+            curriculumChart.update();
+        }
+
+        async function generateContent(type) {
+            if (!currentCycleKey) return;
+
+            const outputDiv = document.getElementById('ai-output');
+            outputDiv.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loading-animation"></div><span class="ml-4 text-gray-500">Generant...</span></div>`;
+            outputDiv.classList.remove('hidden');
+
+            const cycle = curriculumData[currentCycleKey];
+            const curriculumText = cycle.content.map(block => `${block.title}: ${block.points.join(', ')}`).join('. ');
+            let systemPrompt = '';
+            let userPrompt = '';
+
+            if (type === 'activities') {
+                systemPrompt = `Ets un expert en pedagogia i currículum educatiu de Catalunya. La teva tasca és generar 3 idees d'activitats educatives creatives per a un grup d'alumnes. L'objectiu és que les activitats siguin pràctiques i atractives, basades en el contingut proporcionat.`;
+                userPrompt = `Genera 3 idees d'activitats per a alumnes del cicle educatiu "${cycle.title}". El contingut curricular és: "${curriculumText}". Cada idea ha de tenir un títol i una breu descripció. El format ha de ser una llista numerada.`;
+            } else if (type === 'quiz') {
+                systemPrompt = `Ets un expert en pedagogia i avaluació educativa de Catalunya. La teva tasca és generar 3 preguntes de test per a un grup d'alumnes. Les preguntes han de ser clares, concises i estar basades en el contingut proporcionat.`;
+                userPrompt = `Genera 3 preguntes de test (preguntes amb resposta tancada de tipus A, B, C) per a alumnes del cicle educatiu "${cycle.title}". El contingut curricular és: "${curriculumText}". Cada pregunta ha de tenir una pregunta i 3 opcions de resposta, una de les quals és la correcta. El format ha de ser una llista numerada.`;
+            }
+            
+            try {
+                let attempts = 0;
+                const maxAttempts = 3;
+                while (attempts < maxAttempts) {
+                    try {
+                        const payload = {
+                            contents: [{ parts: [{ text: userPrompt }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        };
+                        const response = await fetch(API_URL + apiKey, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            if (response.status === 429) {
+                                throw new Error('API rate limit exceeded. Retrying...');
+                            } else {
+                                throw new Error(`API error: ${response.statusText}`);
+                            }
+                        }
+
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) {
+                            outputDiv.innerHTML = `<div class="p-4 text-left">${text.replace(/\n/g, '<br>')}</div>`;
+                            return;
+                        } else {
+                            throw new Error('No content returned from API.');
+                        }
+                    } catch (error) {
+                        attempts++;
+                        if (attempts >= maxAttempts) {
+                            throw error;
+                        }
+                        const backoffTime = Math.pow(2, attempts) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, backoffTime));
+                    }
+                }
+            } catch (error) {
+                console.error("Error generating content:", error);
+                outputDiv.innerHTML = `<div class="p-4 text-center text-red-500">Hi ha hagut un error en generar el contingut. Torna-ho a provar més tard.</div>`;
+            }
+        }
+
+        window.onload = () => {
+            initializeChart();
+            selectCycle('inicial');
+        };
+
+    </script>
+</body>
+</html>
